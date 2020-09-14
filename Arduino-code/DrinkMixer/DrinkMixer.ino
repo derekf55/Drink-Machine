@@ -15,13 +15,16 @@ LiquidCrystal_I2C lcd(i2c_addr,en, rw, rs, d4, d5, d6, d7, bl, POSITIVE);
  #define inputDT 5
 
  //Pump Inputs
- #define Pump2Ground 6
- #define pumpPin2 7
- #define pumpPin1 8
- #define Pump1Ground 9
- #define pumpPin3 10
- #define Pump3Ground 11
+ //#define Pump2Ground 6
+ #define pumpPin2 10
+ #define pumpPin1 9
+ //#define Pump1Ground 9
+ #define pumpPin3 7
+ //#define Pump3Ground 11
 
+ String previous = "";
+
+ int yn_counter = 0;
  int counter = 0; 
  int currentStateCLK;
  int previousStateCLK; 
@@ -37,22 +40,26 @@ LiquidCrystal_I2C lcd(i2c_addr,en, rw, rs, d4, d5, d6, d7, bl, POSITIVE);
    // Set encoder pins as inputs  
    pinMode (inputCLK,INPUT);
    pinMode (inputDT,INPUT);
-   pinMode(sw, INPUT_PULLUP);
+   pinMode(sw, INPUT);
    
   // Set Pump pins as outputs
   pinMode (pumpPin1, OUTPUT);
-  pinMode (Pump1Ground, OUTPUT);
+  //pinMode (Pump1Ground, OUTPUT);
   pinMode (pumpPin2, OUTPUT);
-  pinMode (Pump2Ground, OUTPUT);
+  //pinMode (Pump2Ground, OUTPUT);
   pinMode (pumpPin3, OUTPUT);
-  pinMode (Pump3Ground, OUTPUT);
+  //pinMode (Pump3Ground, OUTPUT);
   
   digitalWrite(pumpPin1, LOW);
-  digitalWrite(Pump1Ground, LOW);
+  //digitalWrite(Pump1Ground, LOW);
   digitalWrite(pumpPin2, LOW);
-  digitalWrite(Pump2Ground, LOW);
+  //digitalWrite(Pump2Ground, LOW);
   digitalWrite(pumpPin3, LOW);
-  digitalWrite(Pump3Ground, LOW);
+  //digitalWrite(Pump3Ground, LOW);
+
+  lcd.print("Select Drink");
+  
+
   
    
    // Setup Serial Monitor
@@ -60,16 +67,31 @@ LiquidCrystal_I2C lcd(i2c_addr,en, rw, rs, d4, d5, d6, d7, bl, POSITIVE);
    
    // Read the initial state of inputCLK
    // Assign to previousStateCLK variable
-   previousStateCLK = digitalRead(inputCLK);
-   checkCounter();
+   //previousStateCLK = digitalRead(inputCLK);
+   //checkCounter();
  } 
 
- void loop() { 
+ void loop(){
+  // Start screen
+  initial_screen();
+ }
 
-  //Checks 
+ void initial_screen(){
+  while (true){
   if (digitalRead(sw) == LOW ) {
-    checkClick();
+    delay(500);
+    start();
   }
+  }
+ }
+
+void start(){ 
+
+while (true){
+  //lcd.cursor();
+  //Checks 
+  
+  
   
   // Read the current state of inputCLK
    currentStateCLK = digitalRead(inputCLK);
@@ -82,15 +104,15 @@ LiquidCrystal_I2C lcd(i2c_addr,en, rw, rs, d4, d5, d6, d7, bl, POSITIVE);
      if (digitalRead(inputDT) != currentStateCLK ) { 
        counter --;
        encdir ="CCW";
-       if (counter < -1){
-        counter = 1;
+       if (counter < 0){
+        counter = 5;
        }
       checkCounter();
        
      } else {
        // Encoder is rotating clockwise
        counter ++;
-       if (counter > 2){
+       if (counter > 5){
         counter = 0;
        }
        encdir ="CW";
@@ -104,18 +126,43 @@ LiquidCrystal_I2C lcd(i2c_addr,en, rw, rs, d4, d5, d6, d7, bl, POSITIVE);
    } 
    // Update previousStateCLK with the current state
    previousStateCLK = currentStateCLK; 
+
+    if (digitalRead(sw) == LOW ) {
+    delay(500);
+    lcd.clear();
+    lcd.noCursor();
+    lcd.print(previous);
+    lcd.print("?");
+    delay(1200);
+    lcd.clear();
+    lcd.print("*No");
+    lcd.setCursor(0,1);
+    lcd.print("Yes");
+    lcd.setCursor(0,0);
+    counter = 0;
+    yes_no_counter();
+    checkClick();
+  }
+ }
  }
 
 
 //Checks the current value of the rotory encoder and displays proper drink
 void checkCounter(){
-  if (counter == 0){
+  if (counter == 0 or counter == 1){
     lcd.clear();
     lcd.print("Vodka OJ");
+    previous = "Vodka OJ";
   }
-  if (counter == 1){
+  if (counter == 2 or counter == 3){
     lcd.clear();
     lcd.print("Vodka Cranberry");
+    previous = "Vodka Cranberry";
+  } 
+  if (counter == 4 or counter == 5){
+    lcd.clear();
+    lcd.print("Rum n Coke");
+    previous = "Rum n Coke";
   } 
 }
 
@@ -125,21 +172,25 @@ void checkClick(){
   //Pump 2 OJ
   //Pump 3 Cran
 
+  //turn cursor off
+
+  Serial.print("counter at click:    ");
+  Serial.println(counter);
+  
     //Vodka OJ
-    if (counter == 0){
+    if (counter == 0 or counter == 1){
       switchable = false;
       lcd.clear();
       lcd.print("Please Wait ...");
-      runPump(1);
+      runPump(1);               
       runPump(2);
       lcd.clear();
       lcd.print("Drink Mixed");
       delay(2000);
       switchable = true;
-      checkCounter();
     }
     //Vodka Cran
-    if (counter == 1){
+    if (counter == 2 or counter == 3){
       switchable = false;
       lcd.clear();
       lcd.print("Please Wait ...");
@@ -148,9 +199,22 @@ void checkClick(){
       lcd.clear();
       lcd.print("Drink Mixed");
       delay(2000);
-      switchable = true;
-      checkCounter(); 
+      switchable = true; 
     }
+
+    //Coke n Rum
+    if (counter == 4 or counter == 5){
+      switchable = false;
+      lcd.clear();
+      lcd.print("Please Wait ...");
+      runPump(1);
+      runPump(3);
+      lcd.clear();
+      lcd.print("Drink Mixed");
+      delay(2000);
+      switchable = true; 
+    }
+
     
 }
 
@@ -168,20 +232,99 @@ void runPump(int pump){
   }
   //Orange Juice
   if (pump == 2){
+    Serial.println("OJ");
     digitalWrite(pumpPin2, HIGH);
     delay(juice);
     digitalWrite(pumpPin2, LOW);
   }
   // Cran
   if (pump == 3){
-    digitalWrite(pumpPin2, HIGH);
+    digitalWrite(pumpPin3, HIGH);
     delay(juice);
-    digitalWrite(pumpPin2, LOW);
+    digitalWrite(pumpPin3, LOW);
   }
 
   
 }
 
+void yes_no_counter(){
+  while(true){
 
+    if (digitalRead(sw) == LOW ) {
+      delay(500);
+      lcd.clear();
+      if (yn_counter >1){
+        checkClick();
+        lcd.clear();
+        lcd.print("Select Drink");
+        initial_screen();
+      }
+      else{
+        lcd.print("Select Drink");
+        start();
+      }
+    }
+           
+           currentStateCLK = digitalRead(inputCLK);
+            
+           // If the previous and the current state of the inputCLK are different then a pulse has occured
+           if (currentStateCLK != previousStateCLK){ 
+               
+             // If the inputDT state is different than the inputCLK state then 
+             // the encoder is rotating counterclockwise
+             if (digitalRead(inputDT) != currentStateCLK ) { 
+               yn_counter --;
+               encdir ="CCW";
+               if (yn_counter < 0){
+                yn_counter = 3;
+               }
+              
+               
+             } else {
+               // Encoder is rotating clockwise
+               yn_counter ++;
+               if (yn_counter > 3){
+                yn_counter = 0;
+               }
+               encdir ="CW";
+              
+               
+             }
+             Serial.print("Direction: ");
+             Serial.print(encdir);
+             Serial.print(" -- Value: ");
+             Serial.println(yn_counter);
+             previousStateCLK = currentStateCLK; 
+             yes_no_edit();
+           } 
+           // Update previousStateCLK with the current state
+           
+        
+    }
+}
 
- 
+void yes_no_edit(){
+  if (yn_counter > 1){
+    lcd.setCursor(0,0);
+    lcd.print("      ");
+    lcd.setCursor(0,0);
+    lcd.print("No");
+    lcd.setCursor(0,1);
+    lcd.print("      ");
+    lcd.setCursor(0,1);
+    lcd.print("*Yes");
+    Serial.println("yes");
+  }
+  else{
+    lcd.setCursor(0,0);
+    lcd.print("      ");
+    lcd.setCursor(0,0);
+    lcd.print("*No");
+    lcd.setCursor(0,1);
+    lcd.print("      ");
+    lcd.setCursor(0,1);
+    lcd.print("Yes");
+    Serial.println("yes");
+  }
+  yes_no_counter();
+}
