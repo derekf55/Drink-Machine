@@ -1,5 +1,5 @@
-
 #include <LiquidCrystal_I2C.h>
+
 #include <Wire.h>
 
 const int en = 2, rw = 1, rs = 0, d4 = 4, d5 = 5, d6 = 6, d7 = 7, bl = 3;

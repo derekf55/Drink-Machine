@@ -68,12 +68,18 @@ int numOfDrinks = sizeof drinks / sizeof drinks[0];
   pinMode (pumpPin1, OUTPUT);
   pinMode (pumpPin2, OUTPUT);
   pinMode (pumpPin3, OUTPUT);
+  pinMode (pumpPin4, OUTPUT);
+  pinMode (pumpPin5, OUTPUT);
+  pinMode (pumpPin6, OUTPUT);
   
 
   //Insure all pumps are off
   digitalWrite(pumpPin1, LOW);
   digitalWrite(pumpPin2, LOW);
   digitalWrite(pumpPin3, LOW);
+  digitalWrite(pumpPin4, LOW);
+  digitalWrite(pumpPin5, LOW);
+  digitalWrite(pumpPin6, LOW);
 
 
   lcd.print("Select Drink");
@@ -84,10 +90,23 @@ int numOfDrinks = sizeof drinks / sizeof drinks[0];
  } 
 
 //Runs the pumps in order to make the specified drink
-//@param takes the name of the drink to be made
+//@param takes the name of the drink to be made & the size of the drink
 //Function writen by Derek
-void make_drink(String drink){
+void make_drink(String drink, String drinkSize){
   Serial.print(drink);
+
+  switchable = false;
+
+  lcd.clear();
+  lcd.print("Please wait ...");
+
+  //Checks to see if drink should be a double
+  if (drinkSize == "Double"){
+    hardliquor = hardliquor*2;
+  }
+
+  
+  
   if (drink == "Vodka Lemonade"){
     digitalWrite(vodka, HIGH);
     digitalWrite(vodka2, HIGH);
@@ -119,22 +138,19 @@ void make_drink(String drink){
     digitalWrite(rum, LOW);
     
   }
+
+  lcd.clear();
+  lcd.print("Drink Mixed");
+  delay(2000);
+  switchable = true;
 }
 
 
  void loop(){
   // Start screen
-  initial_screen();
+  start();
  }
 
- void initial_screen(){
-  while (true){
-  if (digitalRead(sw) == LOW ) {
-    delay(500);
-    start();
-  }
-  }
- }
 
 void start(){ 
 
@@ -154,7 +170,8 @@ while (true){
        if (counter < 0){
         counter = (numOfDrinks/2)-1;
        }
-      checkCounter(counter);
+      lcd.clear();
+      lcd.print(drinks[getDrinkIndex(counter)]);
        
      } else {
        // User is turning right
@@ -163,47 +180,111 @@ while (true){
         counter = 0;
        }
        encdir ="Right";
-      checkCounter(counter);
+      lcd.clear();
+      lcd.print(drinks[getDrinkIndex(counter)]);
        
      }
    } 
    // Update previousStateCLK with the current state
    previousStateCLK = currentStateCLK; 
 
+    //When the encoder is clicked
     if (digitalRead(sw) == LOW ) {
-    delay(500);
-    lcd.clear();
-    lcd.noCursor();
-    lcd.print(previous);
-    lcd.print("?");
-    delay(1200);
-    lcd.clear();
-    lcd.print("*No");
-    lcd.setCursor(0,1);
-    lcd.print("Yes");
-    lcd.setCursor(0,0);
-    counter = 0;
-    yes_no_counter(counter);
-    checkClick(counter);
+      doubles_menu(counter);
   }
  }
  }
 
+void doubles_menu(int drinkCounter){
+  
+  lcd.clear();
+  lcd.print("Back");
+  // Read the current state of inputCLK
+   currentStateCLK = digitalRead(inputCLK);
+    
+   // If the previous and the current state of the inputCLK are different then a pulse has occured
+   if (currentStateCLK != previousStateCLK){ 
+       
+     // If the inputDT state is different than the inputCLK state then 
+     // The user is turning left
+     if (digitalRead(inputDT) != currentStateCLK ) { 
+       counter --;
+       encdir ="Left";
+       if (counter < 0){
+        counter = 5;
+       }
+      doubles_menu_checkCounter(counter);
+       
+     } else {
+       // User is turning right
+       counter ++;
+       if (counter > 5){
+        counter = 0;
+       }
+       encdir ="Right";
+      doubles_menu_checkCounter(counter);
+       
+     }
+   } 
+   // Update previousStateCLK with the current state
+   previousStateCLK = currentStateCLK; 
 
-//@param takes the value of the counter and finds the correct index for the drink and prints it to the screen
-void checkCounter(int counter){
-    lcd.clear();
-    int drinkIndex;
-    //If the new count is even divide by 2 to get the index of the drink
+    //When the encoder is clicked
+    if (digitalRead(sw) == LOW ) {
+
+      //Back button
+      if (counter == 0 or counter == 1){
+        start();
+      }
+      //Make a single
+      if (counter == 2 or counter == 3){
+        make_drink(drinks[getDrinkIndex(drinkCounter)],"Single");
+      }
+      //Make a double
+      if (counter == 4 or counter == 5){
+        make_drink(drinks[getDrinkIndex(drinkCounter)],"Dobule");
+      }
+  }
+  
+}
+
+int getDrinkIndex(int counter){
+  int drinkIndex;
+
     if (counter%2 == 0){
       int drinkIndex = counter/2;
     } else{
       int drinkIndex = (counter-1)/2;
     }
+    return drinkIndex;
+}
+
+void doubles_menu_checkCounter(int counter){
+  //Back
+  if (counter == 0 or counter == 1){
+    lcd.clear();
+    lcd.print("Back");
+  }
+  if (counter == 2 or counter == 3){
+    lcd.clear();
+    lcd.print("Single");
+  } 
+  if (counter == 4 or counter == 5){
+    lcd.clear();
+    lcd.print("Double");
+  }
+}
+
+
+
+//@param takes the value of the counter and finds the correct index for the drink and prints it to the screen
+void checkCounter(int counter){
+    lcd.clear();
+    int drinkIndex = getDrinkIndex(counter);
     lcd.print(drinks[drinkIndex]);
    
 }
-
+/*
 //If the rotory encoder is clicked check what was selected
 //@param takes the value of the counter and finds the correct index for the drink and prints it to the screen
 void checkClick(int counter){
@@ -224,92 +305,11 @@ void checkClick(int counter){
       int drinkIndex = (counter-1)/2;
     }
 
-    make_drink(drinks[drinkIndex]);
+    
     lcd.clear();
     lcd.print("Drink Mixed");
     delay(2000);
     switchable = true;
         
 }
-
-void yes_no_counter(int counter){
-  while(true){
-
-    if (digitalRead(sw) == LOW ) {
-      delay(500);
-      lcd.clear();
-      if (yn_counter >1){
-        checkClick(counter);
-        lcd.clear();
-        lcd.print("Select Drink");
-        initial_screen();
-      }
-      else{
-        lcd.print("Select Drink");
-        start();
-      }
-    }
-           
-           currentStateCLK = digitalRead(inputCLK);
-            
-           // If the previous and the current state of the inputCLK are different then a pulse has occured
-           if (currentStateCLK != previousStateCLK){ 
-               
-             // If the inputDT state is different than the inputCLK state then 
-             // the encoder is rotating counterclockwise
-             if (digitalRead(inputDT) != currentStateCLK ) { 
-               yn_counter --;
-               encdir ="CCW";
-               if (yn_counter < 0){
-                yn_counter = 3;
-               }
-              
-               
-             } else {
-               // Encoder is rotating clockwise
-               yn_counter ++;
-               if (yn_counter > 3){
-                yn_counter = 0;
-               }
-               encdir ="CW";
-              
-               
-             }
-             Serial.print("Direction: ");
-             Serial.print(encdir);
-             Serial.print(" -- Value: ");
-             Serial.println(yn_counter);
-             previousStateCLK = currentStateCLK; 
-             yes_no_edit();
-           } 
-           // Update previousStateCLK with the current state
-           
-        
-    }
-}
-
-void yes_no_edit(){
-  if (yn_counter > 1){
-    lcd.setCursor(0,0);
-    lcd.print("      ");
-    lcd.setCursor(0,0);
-    lcd.print("No");
-    lcd.setCursor(0,1);
-    lcd.print("      ");
-    lcd.setCursor(0,1);
-    lcd.print("*Yes");
-    Serial.println("yes");
-  }
-  else{
-    lcd.setCursor(0,0);
-    lcd.print("      ");
-    lcd.setCursor(0,0);
-    lcd.print("*No");
-    lcd.setCursor(0,1);
-    lcd.print("      ");
-    lcd.setCursor(0,1);
-    lcd.print("Yes");
-    Serial.println("yes");
-  }
-  yes_no_counter(counter);
-}
+*/
