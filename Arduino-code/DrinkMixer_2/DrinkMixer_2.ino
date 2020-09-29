@@ -3,11 +3,12 @@
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 
-const int en = 2, rw = 1, rs = 0, d4 = 4, d5 = 5, d6 = 6, d7 = 7, bl = 3;
+//const int en = 2, rw = 1, rs = 0, d4 = 4, d5 = 5, d6 = 6, d7 = 7, bl = 3;
 const int i2c_addr = 0xA7;
 
 
-LiquidCrystal_I2C lcd(i2c_addr,20,4);
+//LiquidCrystal_I2C lcd(i2c_addr,en, rw, rs, d4, d5, d6, d7, bl, POSITIVE);
+LiquidCrystal_I2C lcd(0x27,16,2);
 
 //Current set drinks
 String drinks[] = {"Vodka Lemonade","Vodka Cran","Run n Coke"};
@@ -15,19 +16,18 @@ int numOfDrinks = sizeof drinks / sizeof drinks[0];
 
 
  // Rotary Encoder Inputs
- #define sw 3
- #define inputCLK 4
- #define inputDT 5
+ #define sw 10
+ #define inputCLK 8
+ #define inputDT 9
 
- //Pump Inputs
- #define pumpPin2 10
- #define pumpPin1 9
- #define pumpPin3 7
 
  //Assigning pin 0 for all unaccounted for pumps
- int pumpPin4 = 0;
- int pumpPin5 = 0;
- int pumpPin6 = 0;
+ int pumpPin1 = 2;
+ int pumpPin2 = 3;
+ int pumpPin3 = 4;
+ int pumpPin4 = 5;
+ int pumpPin5 = 6;
+ int pumpPin6 = 7;
  
 
  String previous = "";
@@ -50,13 +50,16 @@ int numOfDrinks = sizeof drinks / sizeof drinks[0];
 
   //Gives the time to pour for hardliquor and mixer
   //Estimating the flow rate for small pump at 30ml/min
-  int hardliquor = 120;
-  int mixer = 46;
+  long hardliquor = 120000;
+  long mixer = 46000;
 
 
  void setup() { 
 
    //Start LCD
+   lcd.init();                      // initialize the lcd 
+  // Print a message to the LCD.
+    lcd.backlight();
    lcd.begin(16,2);
 
    //Set encoder pins as inputs  
@@ -86,6 +89,8 @@ int numOfDrinks = sizeof drinks / sizeof drinks[0];
    
    // Setup Serial Monitor
    Serial.begin (9600);
+   delay(1000);
+   int counter = 0;
    
  } 
 
@@ -94,8 +99,6 @@ int numOfDrinks = sizeof drinks / sizeof drinks[0];
 //Function writen by Derek
 void make_drink(String drink, String drinkSize){
   Serial.print(drink);
-
-  switchable = false;
 
   lcd.clear();
   lcd.print("Please wait ...");
@@ -117,8 +120,7 @@ void make_drink(String drink, String drinkSize){
     delay((hardliquor/2)-mixer);
     digitalWrite(vodka, LOW);
     digitalWrite(vodka2, LOW);   
-  }
-  if (drink == "Vodka Cran"){
+  } else if (drink == "Vodka Cran"){
     digitalWrite(vodka, HIGH);
     digitalWrite(vodka2, HIGH);
     digitalWrite(cran, HIGH);
@@ -128,8 +130,7 @@ void make_drink(String drink, String drinkSize){
     delay((hardliquor/2)-mixer);
     digitalWrite(vodka, LOW);
     digitalWrite(vodka2, LOW);   
-  }
-  if (drink == "Run n Coke"){
+  } else if (drink == "Run n Coke"){
     digitalWrite(rum, HIGH);
     digitalWrite(coke, HIGH);
     delay(mixer);
@@ -137,12 +138,24 @@ void make_drink(String drink, String drinkSize){
     delay(hardliquor-mixer);
     digitalWrite(rum, LOW);
     
+  } 
+  //Test drink
+  else if (drink == "Vod Coke") {
+    digitalWrite(rum, HIGH);
+    digitalWrite(coke, HIGH);
+    delay(mixer);
+    digitalWrite(coke, LOW);
+    delay(hardliquor-mixer);
+    digitalWrite(rum, LOW);
+  } else{
+    Serial.print("Failed");
   }
 
   lcd.clear();
   lcd.print("Drink Mixed");
   delay(2000);
   switchable = true;
+  
 }
 
 
@@ -154,8 +167,11 @@ void make_drink(String drink, String drinkSize){
 
 void start(){ 
 
-while (true){
+counter = 0;
+lcd.clear();
+lcd.print(drinks[getDrinkIndex(counter)]);
 
+while (switchable == true){
   // Read the current state of inputCLK
    currentStateCLK = digitalRead(inputCLK);
     
@@ -168,10 +184,13 @@ while (true){
        counter --;
        encdir ="Left";
        if (counter < 0){
-        counter = (numOfDrinks/2)-1;
+        counter = (numOfDrinks*2)-1;
+        //Serial.print(numOfDrinks);
        }
       lcd.clear();
       lcd.print(drinks[getDrinkIndex(counter)]);
+      //Serial.print(counter);
+      //Serial.print(drinks[getDrinkIndex(counter)]+"\n");
        
      } else {
        // User is turning right
@@ -182,6 +201,8 @@ while (true){
        encdir ="Right";
       lcd.clear();
       lcd.print(drinks[getDrinkIndex(counter)]);
+      //Serial.print(counter);
+      //Serial.print(drinks[getDrinkIndex(counter)]+"\n");
        
      }
    } 
@@ -190,16 +211,20 @@ while (true){
 
     //When the encoder is clicked
     if (digitalRead(sw) == LOW ) {
+      switchable = false;
       doubles_menu(counter);
+      
   }
  }
  }
 
 void doubles_menu(int drinkCounter){
-  
+
+  delay(500);
   lcd.clear();
   lcd.print("Back");
-  // Read the current state of inputCLK
+  while (true){
+    // Read the current state of inputCLK
    currentStateCLK = digitalRead(inputCLK);
     
    // If the previous and the current state of the inputCLK are different then a pulse has occured
@@ -234,28 +259,40 @@ void doubles_menu(int drinkCounter){
 
       //Back button
       if (counter == 0 or counter == 1){
+        Serial.println("Go back");
+        switchable = true;
+        delay(500);
         start();
       }
       //Make a single
       if (counter == 2 or counter == 3){
-        make_drink(drinks[getDrinkIndex(drinkCounter)],"Single");
+        Serial.print("Make double\n");
+        make_drink(drinks[getDrinkIndex(drinkCounter)],"Dobule");
+        start();
       }
       //Make a double
       if (counter == 4 or counter == 5){
-        make_drink(drinks[getDrinkIndex(drinkCounter)],"Dobule");
+        Serial.print("Make single\n");
+        make_drink(drinks[getDrinkIndex(drinkCounter)],"Single");
+        start();
       }
   }
+  }
+  
   
 }
 
 int getDrinkIndex(int counter){
   int drinkIndex;
-
+  
     if (counter%2 == 0){
-      int drinkIndex = counter/2;
+      drinkIndex = counter/2;
+      //Serial.print("Even");
     } else{
-      int drinkIndex = (counter-1)/2;
+      drinkIndex = (counter-1)/2;
+      //Serial.print("ODD");
     }
+    Serial.print(drinkIndex);
     return drinkIndex;
 }
 
@@ -267,11 +304,11 @@ void doubles_menu_checkCounter(int counter){
   }
   if (counter == 2 or counter == 3){
     lcd.clear();
-    lcd.print("Single");
+    lcd.print("Double");
   } 
   if (counter == 4 or counter == 5){
     lcd.clear();
-    lcd.print("Double");
+    lcd.print("Single");
   }
 }
 
