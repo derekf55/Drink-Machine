@@ -340,32 +340,3 @@ void checkCounter(int counter){
     lcd.print(drinks[drinkIndex]);
    
 }
-/*
-//If the rotory encoder is clicked check what was selected
-//@param takes the value of the counter and finds the correct index for the drink and prints it to the screen
-void checkClick(int counter){
-  //turn cursor off
-
-  Serial.print("counter at click:    ");
-  Serial.println(counter);
-
-     switchable = false;
-     lcd.clear();
-     lcd.print("Please Wait ...");
-
-    int drinkIndex;
-
-    if (counter%2 == 0){
-      int drinkIndex = counter/2;
-    } else{
-      int drinkIndex = (counter-1)/2;
-    }
-
-    
-    lcd.clear();
-    lcd.print("Drink Mixed");
-    delay(2000);
-    switchable = true;
-        
-}
-*/
