@@ -59,6 +59,10 @@ int numOfDrinks = sizeof drinks / sizeof drinks[0];
   int rum = pumpPin2;
   //Brown
   int coke = pumpPin5;
+  //Not set
+  int tequilla = 0;
+  //Not set
+  int margMix = 0;
 
   //Gives the time to pour for hardliquor and mixer
   //Estimating the flow rate for small pump at 30ml/min
@@ -150,7 +154,14 @@ void make_drink(String drink, String drinkSize){
     delay(hardliquor-mixer);
     digitalWrite(rum, LOW);
     
-  } 
+  }else if (drink == "Margarita"){
+    digitalWrite(tequilla, HIGH);
+    digitalWrite(margMix, HIGH);
+    delay(mixer);
+    digitalWrite(margMix, LOW);
+    delay(hardliquor-mixer);
+    digitalWrite(tequilla, LOW);
+  }
   //Test drink
   else if (drink == "Vod Coke") {
     digitalWrite(rum, HIGH);
